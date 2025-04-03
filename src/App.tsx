@@ -1,70 +1,161 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import './App.css';
 import Timeout from './Timeout.tsx';
+import PetSelector from './PetSelector.tsx';
 
 function App() {
-    const [statusImg, setStatusImg] = React.useState('src/m_verstappen.png');
-    const feedRef = useRef<() => void>(() => { });
-    const playRef = useRef<() => void>(() => { });
-    const sleepRef = useRef<() => void>(() => { });
+    const [statusImg, setStatusImg] = useState('src/m_verstappen.png');
+    const [pet, setPet] = useState<string | null>(null);
+    const [action, setAction] = useState<string | null>(null);
+    const [cooldown, setCooldown] = useState(false);
+    const [stats, setStats] = useState({ feed: 0, play: 0, sleep: 0 });
+    const [isDead, setIsDead] = useState(false);
+    const feedRef = useRef<(seconds: number) => void>(() => { });
+    const playRef = useRef<(seconds: number) => void>(() => { });
+    const sleepRef = useRef<(seconds: number) => void>(() => { });
+    const actionIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const actionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    let seconds = 0;
 
-    let cooldown = false;
+    useEffect(() => {
+        const savedPet = localStorage.getItem('pet');
+        if (savedPet) {
+            setPet(savedPet);
+            setStatusImg(`src/m_${savedPet}.png`);
+        }
+    }, []);
 
-    const handleFeed = () => {
+    useEffect(() => {
+        if (pet) {
+            localStorage.setItem('pet', pet);
+            setStatusImg(`src/m_${pet}.png`);
+            setStats({ feed: 100, play: 100, sleep: 100 });
+            localStorage.setItem('hunger', JSON.stringify(100));
+            localStorage.setItem('happiness', JSON.stringify(100));
+            localStorage.setItem('energy', JSON.stringify(100));
+        }
+    }, [pet]);
+
+    const startAction = (actionType: string, actionImg: string) => {
         if (cooldown) return;
 
-        cooldown = true;
-        setStatusImg('src/eat.png');
-        feedRef.current();
-        setTimeout(() => {
-            setStatusImg('src/m_verstappen.png');
-            cooldown = false;
-        }, 12000);
+        setAction(actionType);
+        setStatusImg(actionImg);
+        seconds = 0;
+
+        actionIntervalRef.current = setInterval(() => {
+            seconds += 1;
+            console.log(`${actionType} action: ${seconds} seconds`);
+            if (seconds >= 10) {
+                stopAction(actionType);
+            }
+        }, 1000);
+
+        actionTimeoutRef.current = setTimeout(() => {
+            stopAction(actionType);
+            setCooldown(true);
+            setTimeout(() => {
+                setCooldown(false);
+            }, 60000);
+        }, 10000);
+    };
+
+    const stopAction = (actionType: string) => {
+        if (actionIntervalRef.current) {
+            clearInterval(actionIntervalRef.current);
+            actionIntervalRef.current = null;
+        }
+        if (actionTimeoutRef.current) {
+            clearTimeout(actionTimeoutRef.current);
+            actionTimeoutRef.current = null;
+        }
+        setStats((prevStats) => ({
+            ...prevStats,
+            [actionType]: Math.min(prevStats[actionType as keyof typeof prevStats] + seconds, 100),
+        }));
+        setStatusImg(`src/m_${pet}.png`);
+        setAction(null);
+
+        if (actionType === 'feed') {
+            feedRef.current(seconds);
+        } else if (actionType === 'play') {
+            playRef.current(seconds);
+        } else if (actionType === 'sleep') {
+            sleepRef.current(seconds);
+        }
+    };
+
+    const handleFeed = () => {
+        startAction('feed', `src/eat.png`);
     };
 
     const handlePlay = () => {
-        if (cooldown) return;
-
-        cooldown = true;
-        setStatusImg('src/play_verstappen.png');
-        playRef.current();
-        setTimeout(() => {
-            setStatusImg('src/m_verstappen.png');
-            cooldown = false;
-        }, 12000);
+        startAction('play', `src/play_${pet}.png`);
     };
 
     const handleSleep = () => {
-        if (cooldown) return;
-
-        cooldown = true;
-        setStatusImg('src/sleep.png');
-        sleepRef.current();
-        setTimeout(() => {
-            setStatusImg('src/m_verstappen.png');
-            cooldown = false;
-        }, 12000);
+        startAction('sleep', `src/sleep.png`);
     };
+
+    const handleReset = () => {
+        localStorage.removeItem('pet');
+        localStorage.removeItem('statusImg');
+        localStorage.removeItem('hunger');
+        localStorage.removeItem('happiness');
+        localStorage.removeItem('energy');
+        setPet(null);
+        setStatusImg('src/m_verstappen.png');
+        setStats({ feed: 0, play: 0, sleep: 0 });
+        setIsDead(false);
+    };
+
+    const handleDeath = () => {
+        setIsDead(true);
+        handleReset();
+    };
+
+    if (!pet) {
+        return <PetSelector onSelect={setPet} />;
+    }
 
     return (
         <>
+            <header>
+                <h1>Tamagotchi</h1>
+            </header><br />
             <main>
-                <aside>
-                    <Timeout
-                        onFeed={(callback) => (feedRef.current = callback)}
-                        onPlay={(callback) => (playRef.current = callback)}
-                        onSleep={(callback) => (sleepRef.current = callback)}
-                    />
-                </aside>
-                <article>
-                    <img src={statusImg} width='128' height='128' alt="pet" /><br />
-                    <button onClick={handleFeed}>Feed</button>
-                    <button onClick={handlePlay}>Play</button>
-                    <button onClick={handleSleep}>Sleep</button>
-                </article>
+                {isDead ? (
+                    <div className="death-message">
+                        <h2>Your pet has died sad and hungry</h2>
+                    </div>
+                ) : (
+                    <>
+                        <aside>
+                            <Timeout
+                                onFeed={(callback) => (feedRef.current = callback)}
+                                onPlay={(callback) => (playRef.current = callback)}
+                                onSleep={(callback) => (sleepRef.current = callback)}
+                                onReset={handleDeath}
+                            />
+                        </aside>
+                        <article>
+                            <div className="pet-container">
+                                <img src={statusImg} width='128' height='128' alt="pet" />
+                                {action === 'play' && <img src="src/wind.png" className="wind" alt="wind" />}
+                            </div>
+                            <br />
+                            <button onClick={handleFeed} disabled={cooldown || action !== null}>Feed</button>
+                            <button onClick={handlePlay} disabled={cooldown || action !== null}>Play</button>
+                            <button onClick={handleSleep} disabled={cooldown || action !== null}>Sleep</button>
+                            {action && <button onClick={() => stopAction(action)}>Stop {action}</button>}
+                        </article>
+                        <button className="reset-button" onClick={handleReset}>Reset</button>
+                    </>
+                )}
             </main>
         </>
     );
 }
 
 export default App;
+

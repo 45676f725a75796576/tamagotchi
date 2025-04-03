@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 
 interface TimeoutProps {
-    onFeed: (callback: () => void) => void;
-    onPlay: (callback: () => void) => void;
-    onSleep: (callback: () => void) => void;
+    onFeed: (callback: (seconds: number) => void) => void;
+    onPlay: (callback: (seconds: number) => void) => void;
+    onSleep: (callback: (seconds: number) => void) => void;
+    onReset: () => void;
 }
 
-const Timeout: React.FC<TimeoutProps> = ({ onFeed, onPlay, onSleep }) => {
+const Timeout: React.FC<TimeoutProps> = ({ onFeed, onPlay, onSleep, onReset }) => {
     const [hunger, setHunger] = useState(() => {
         const saved = localStorage.getItem('hunger');
         return saved !== null ? JSON.parse(saved) : 100;
@@ -37,25 +38,32 @@ const Timeout: React.FC<TimeoutProps> = ({ onFeed, onPlay, onSleep }) => {
                 localStorage.setItem('energy', JSON.stringify(newEnergy));
                 return newEnergy;
             });
-        }, 1200); // 120000 ms = 2 minutes
+        }, 6000); // 120000 ms = 2 minutes
 
         return () => clearInterval(interval);
     }, []);
 
     useEffect(() => {
-        onFeed(() => {
-            setHunger(100);
-            localStorage.setItem('hunger', JSON.stringify(100));
+        if (hunger === 0 || happiness === 0 || energy === 0) {
+            onReset();
+            alert('Your pet has died sad and hungry');
+        }
+    }, [hunger, happiness, energy, onReset]);
+
+    useEffect(() => {
+        onFeed((seconds) => {
+            setHunger(prev => Math.min(prev + seconds, 100));
+            localStorage.setItem('hunger', JSON.stringify(Math.min(hunger + seconds, 100)));
         });
-        onPlay(() => {
-            setHappiness(100);
-            localStorage.setItem('happiness', JSON.stringify(100));
+        onPlay((seconds) => {
+            setHappiness(prev => Math.min(prev + seconds, 100));
+            localStorage.setItem('happiness', JSON.stringify(Math.min(happiness + seconds, 100)));
         });
-        onSleep(() => {
-            setEnergy(100);
-            localStorage.setItem('energy', JSON.stringify(100));
+        onSleep((seconds) => {
+            setEnergy(prev => Math.min(prev + seconds, 100));
+            localStorage.setItem('energy', JSON.stringify(Math.min(energy + seconds, 100)));
         });
-    }, [onFeed, onPlay, onSleep]);
+    }, [onFeed, onPlay, onSleep, hunger, happiness, energy]);
 
     return (
         <div>
@@ -67,3 +75,4 @@ const Timeout: React.FC<TimeoutProps> = ({ onFeed, onPlay, onSleep }) => {
 };
 
 export default Timeout;
+
