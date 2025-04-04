@@ -36,6 +36,15 @@ function App() {
         }
     }, [pet]);
 
+    useEffect(() => {
+        const sprite = document.getElementById('sprite');
+        if (action === 'play') {
+            sprite?.classList.add('play');
+        } else {
+            sprite?.classList.remove('play');
+        }
+    }, [action]);
+
     const startAction = (actionType: string, actionImg: string) => {
         if (cooldown) return;
 
@@ -140,14 +149,16 @@ function App() {
                         </aside>
                         <article>
                             <div className="pet-container">
-                                <img src={statusImg} width='128' height='128' alt="pet" />
+                                <img src={statusImg} width='128' height='128' alt="pet" id='sprite' />
                                 {action === 'play' && <img src="src/wind.png" className="wind" alt="wind" />}
                             </div>
                             <br />
-                            <button onClick={handleFeed} disabled={cooldown || action !== null}>Feed</button>
-                            <button onClick={handlePlay} disabled={cooldown || action !== null}>Play</button>
-                            <button onClick={handleSleep} disabled={cooldown || action !== null}>Sleep</button>
-                            {action && <button onClick={() => stopAction(action)}>Stop {action}</button>}
+                            <div className="buttons">
+                                <button onClick={handleFeed} disabled={cooldown || action !== null}>Feed</button>
+                                <button onClick={handlePlay} disabled={cooldown || action !== null}>Play</button>
+                                <button onClick={handleSleep} disabled={cooldown || action !== null}>Sleep</button>
+                                {action && <button onClick={() => stopAction(action)}>Stop {action}</button>}
+                            </div>
                         </article>
                         <button className="reset-button" onClick={handleReset}>Reset</button>
                     </>
@@ -158,4 +169,3 @@ function App() {
 }
 
 export default App;
-
