@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import './App.css';
+import './Night.css';
 import Timeout from './Timeout.tsx';
 import PetSelector from './PetSelector.tsx';
 

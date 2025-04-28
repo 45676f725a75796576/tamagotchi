@@ -13,6 +13,10 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+#root {
+  border: 2px solid rgb(255, 255, 255);
+}
+
 a {
   font-weight: 500;
   color: #646cff;
@@ -64,5 +68,14 @@ button:focus-visible {
   }
   button {
     background-color: #f9f9f9;
+  }
+  header {
+    color: #1a1a1a;
+  }
+  h1 {
+    color: #1a1a1a;
+  }
+  #root {
+  border: 2px solid black;
   }
 }
